@@ -18,3 +18,4 @@ BugReports: https://github.com/rstudio/spark-install/issues
 LazyData: true
 Depends:
     R (>= 3.1.2)
+RoxygenNote: 6.0.0
