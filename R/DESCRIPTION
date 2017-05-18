@@ -1,0 +1,20 @@
+Package: sparkinstall
+Type: Package
+Title: Install Apache Spark from R
+Version: 0.1.0
+Authors@R: c(
+    person("Javier", "Luraschi", email = "javier@rstudio.com", role = c("aut", "cre")),
+    person(family = "RStudio", role = c("aut", "cph"), comment = "Bundled sparklyr installer"),
+    person(family = "The Apache Software Foundation", role = c("aut", "cph"))
+    )
+Maintainer: Javier Luraschi <javier@rstudio.com>
+Description: This package provides support to install Apache Spark
+    from R. Intented to be a shared effort across software applications
+    to minimize use of system resources.
+License: Apache License 2.0 | file LICENSE
+SystemRequirements: Spark: 1.6.x or 2.x
+URL: https://github.com/rstudio/spark-install
+BugReports: https://github.com/rstudio/spark-install/issues
+LazyData: true
+Depends:
+    R (>= 3.1.2)
