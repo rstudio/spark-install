@@ -21,3 +21,5 @@ LazyData: true
 Depends:
     R (>= 3.1.2)
 RoxygenNote: 6.0.0
+Imports:
+    rappdirs
