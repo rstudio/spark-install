@@ -10,13 +10,23 @@ This project provides a cross-platform installer for Apache Spark designed to us
 spark_available_versions()
 
 # installs an specific version
-spark_install(version = "2.1.0")
+spark_install(version = "1.6.2")
 
 # uninstalls an specific version
-spark_uninstall(version = "2.1.0", hadoop_version = "2.7")
+spark_uninstall(version = "1.6.2", hadoop_version = "2.6")
 ```
 
 ## Python
 
 ```
+import spark_install
+
+# lists the versions available to install
+spark_install.spark_versions()
+
+# installs an specific version
+spark_install.spark_install(spark_version = "1.6.2")
+
+# uninstalls an specific version
+spark_install.spark_uninstall(spark_version = "1.6.2", hadoop_version = "2.6")
 ```
