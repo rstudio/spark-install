@@ -1,5 +1,3 @@
-
-
 # Check if Spark can be installed in this system
 spark_can_install <- function() {
   sparkDir <- spark_install_dir()
@@ -14,9 +12,6 @@ spark_install_available <- function(version, hadoop_version) {
   installInfo <- spark_versions_info(version, hadoop_version)
   dir.exists(installInfo$sparkVersionDir)
 }
-
-
-
 
 spark_install_find <- function(sparkVersion = NULL,
                                hadoopVersion = NULL,
@@ -250,9 +245,12 @@ spark_uninstall <- function(version, hadoop_version) {
 #' @rdname spark_install
 #' @export
 spark_install_dir <- function() {
-  getOption("spark.install.dir", rappdirs::app_dir("spark", "rstudio")$cache())
-}
+  config <- jsonlite::fromJSON(
+    system.file("config/config.json", package = "sparkinstall")
+  )
 
+  getOption("spark.install.dir", config$dirs[[.Platform$OS.type]])
+}
 
 #' @rdname spark_install
 #' @export
