@@ -1,4 +1,4 @@
-# sparkinstall
+# spark-install
 > Cross-platform installer for Apache Spark.
 
 This project provides a cross-platform installer for Apache Spark designed to use system resources efficiently under a common API. This initial version commes with support for R and Python that arose from a collaboration between [RStudio](https://www.rstudio.com) and [Microsoft](https://www.microsoft.com).
