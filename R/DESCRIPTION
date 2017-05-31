@@ -22,4 +22,5 @@ Depends:
     R (>= 3.1.2)
 RoxygenNote: 6.0.0
 Imports:
-    rappdirs
+    rappdirs,
+    jsonlite (>= 1.4)
