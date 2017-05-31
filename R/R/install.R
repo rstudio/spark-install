@@ -242,6 +242,18 @@ spark_uninstall <- function(version, hadoop_version) {
   }
 }
 
+spark_resolve_envpath <- function(path_with_end) {
+  if (.Platform$OS.type == "windows") {
+    parts <- strsplit(path_with_end, "/")[[1]]
+    first <- gsub("%", "", parts[[1]])
+    if (nchar(Sys.getenv(first)) > 0) parts[[1]] <- Sys.getenv(first)
+    do.call("file.path", as.list(parts))
+  }
+  else {
+    normalizePath(path_with_end)
+  }
+}
+
 #' @rdname spark_install
 #' @export
 spark_install_dir <- function() {
@@ -249,7 +261,7 @@ spark_install_dir <- function() {
     system.file("config/config.json", package = "sparkinstall")
   )
 
-  getOption("spark.install.dir", config$dirs[[.Platform$OS.type]])
+  getOption("spark.install.dir", spark_resolve_envpath(config$dirs[[.Platform$OS.type]]))
 }
 
 #' @rdname spark_install
