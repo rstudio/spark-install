@@ -5,23 +5,20 @@ spark_versions_file_pattern <- function() {
 }
 
 spark_versions_url <- function() {
-  "https://raw.githubusercontent.com/rstudio/sparklyr/master/inst/extdata/install_spark.csv"
+  "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json"
 }
 
-read_spark_versions_csv <- function(file = spark_versions_url()) {
+#' @importFrom jsonlite fromJSON
+read_spark_versions_json <- function(file = spark_versions_url()) {
 
   # see if we have a cached version
-  if (!exists("sparkVersionsCsv", envir = .globals))
+  if (!exists("sparkVersionsJson", envir = .globals))
   {
-    versionsCsv <- utils::read.csv(file,
-                                   colClasses = c(hadoop = "character"),
-                                   stringsAsFactors = FALSE)
-
-    assign("sparkVersionsCsv", versionsCsv, envir = .globals)
-
+    versionsJson <- fromJSON(file, simplifyDataFrame = TRUE)
+    assign("sparkVersionsJson", versionsJson, envir = .globals)
   }
 
-  .globals$sparkVersionsCsv
+  .globals$sparkVersionsJson
 }
 
 
@@ -55,7 +52,7 @@ spark_installed_versions <- function() {
 #' @rdname spark_install
 #' @export
 spark_available_versions <- function() {
-  versions <- read_spark_versions_csv()
+  versions <- read_spark_versions_json()
   versions <- versions[versions$spark >= "1.6.0", 1:2]
   versions$install <- paste0("spark_install(version = \"",
                              versions$spark, "\", ",
@@ -67,31 +64,37 @@ spark_available_versions <- function() {
 
 spark_versions <- function(latest = TRUE) {
 
-  # NOTE: this function is called during configure and the 'sparklyr' package
+  # This function might be called during a custom configuration and the package
   # will not be available at that time; allow overriding with environment variable
-  packagePathEnv <- Sys.getenv("R_SPARKLYR_INSTALL_INFO_PATH", unset = NA)
+  packagePathEnv <- Sys.getenv("R_SPARKINSTALL_INSTALL_INFO_PATH", unset = NA)
   packagePath <- if (!is.na(packagePathEnv))
     packagePathEnv
   else
-    system.file(file.path("extdata", "install_spark.csv"), package = "sparklyr")
+    system.file(file.path("data", "versions.json"), package = "sparkinstall")
 
   downloadData <- NULL
   if (latest) {
     tryCatch({
       suppressWarnings(
-        downloadData <- read_spark_versions_csv()
+        downloadData <- read_spark_versions_json()
       )
     }, error = function(e) {
     })
   }
 
   if (is.null(downloadData) || is.null(downloadData$spark)) {
-    # warning("Failed to retrieve the latest download links")
-    downloadData <- read_spark_versions_csv(packagePath)
+    downloadData <- read_spark_versions_json(packagePath)
   }
 
-
   downloadData$installed <- rep(FALSE, NROW(downloadData))
+
+  downloadData$download <- paste(
+    downloadData$base,
+    mapply(function(pattern, spark, hadoop) {
+      sprintf(pattern, spark, hadoop)
+    }, downloadData$pattern, downloadData$spark, downloadData$hadoop),
+    sep = ""
+  )
 
   mergedData <- downloadData
   lapply(
@@ -109,10 +112,15 @@ spark_versions <- function(latest = TRUE) {
       notCurrentRow <- mergedData[mergedData$spark != row$spark | mergedData$hadoop != row$hadoop, ]
 
       newRow <- c(row, installed = TRUE)
-      newRow$default <- if (NROW(currentRow) > 0) currentRow$default else FALSE
+      newRow$default <- if (NROW(currentRow) > 0) identical(currentRow$spark, "1.6.2") else FALSE
       newRow$download <- if (NROW(currentRow) > 0) currentRow$download else ""
-      newRow$hadoop_label <- if (NROW(currentRow) > 0) currentRow$hadoop_label else paste("Hadoop", row$hadoop)
-      newRow$hadoop_default <- if (NROW(currentRow) > 0) currentRow$hadoop_default else FALSE
+      newRow$hadoop_label <- currentRow$hadoop
+      newRow$hadoop_default <- if (NROW(currentRow) > 0) {
+        if (compareVersion(currentRow$spark, "2.0") >= 0)
+          identical(currentRow$hadoop, "2.7")
+        else
+          identical(currentRow$hadoop, "2.6")
+      } else FALSE
 
       mergedData <<- rbind(notCurrentRow, newRow)
     }

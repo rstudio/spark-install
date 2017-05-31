@@ -29,7 +29,7 @@ verify_msvcr100 <- function() {
 }
 
 prepare_windows_environment <- function(sparkHome) {
-  verbose <- sparklyr_boolean_option("sparklyr.verbose")
+  verbose <- identical(getOption("sparkinstall.verbose"), TRUE)
   verboseMessage <- function(...) {
     if (verbose) message(...)
   }
