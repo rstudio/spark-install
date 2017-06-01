@@ -1,1 +1,6 @@
-../../../common/config.json
+{
+  "dirs": {
+    "unix":   "~/spark",
+    "windows": "%LOCALAPPDATA%/spark"
+  }
+}
