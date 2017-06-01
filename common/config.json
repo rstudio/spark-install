@@ -1,6 +1,6 @@
 {
   "dirs": {
-    "unix":   "$HOME/spark",
+    "unix":   "~/spark",
     "windows": "%LOCALAPPDATA%/spark"
   }
 }
