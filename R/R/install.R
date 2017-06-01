@@ -250,7 +250,7 @@ spark_resolve_envpath <- function(path_with_end) {
     do.call("file.path", as.list(parts))
   }
   else {
-    normalizePath(path_with_end)
+    normalizePath(path_with_end, mustWork = FALSE)
   }
 }
 
