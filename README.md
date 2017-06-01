@@ -19,14 +19,14 @@ spark_uninstall(version = "1.6.2", hadoop_version = "2.6")
 ## Python
 
 ```
-import spark_install
+from spark_install import *
 
 # lists the versions available to install
-spark_install.spark_versions()
+spark_versions()
 
 # installs an specific version
-spark_install.spark_install(spark_version = "1.6.2")
+spark_install(spark_version = "1.6.2")
 
 # uninstalls an specific version
-spark_install.spark_uninstall(spark_version = "1.6.2", hadoop_version = "2.6")
+spark_uninstall(spark_version = "1.6.2", hadoop_version = "2.6")
 ```
