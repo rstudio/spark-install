@@ -24,3 +24,6 @@ RoxygenNote: 6.0.0
 Imports:
     rappdirs,
     jsonlite (>= 1.4)
+Suggests:
+    assertthat,
+    testthat
