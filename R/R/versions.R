@@ -5,7 +5,7 @@ spark_versions_file_pattern <- function() {
 }
 
 spark_versions_url <- function() {
-  "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json"
+  "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json?token=ADUVPw4fKGhvEGx7NSCmljaNIUzES1rnks5ZOdMmwA%3D%3D"
 }
 
 #' @importFrom jsonlite fromJSON
@@ -96,6 +96,9 @@ spark_versions <- function(latest = TRUE) {
     sep = ""
   )
 
+  downloadData$default <- rep(FALSE, NROW(downloadData))
+  downloadData$hadoop_default <- rep(FALSE, NROW(downloadData))
+
   mergedData <- downloadData
   lapply(
     Filter(function(e) !is.null(e),
@@ -112,15 +115,14 @@ spark_versions <- function(latest = TRUE) {
       notCurrentRow <- mergedData[mergedData$spark != row$spark | mergedData$hadoop != row$hadoop, ]
 
       newRow <- c(row, installed = TRUE)
-      newRow$default <- if (NROW(currentRow) > 0) identical(currentRow$spark, "1.6.2") else FALSE
+      newRow$base <- if (NROW(currentRow) > 0) currentRow$base else ""
+      newRow$pattern <- if (NROW(currentRow) > 0) currentRow$pattern else ""
       newRow$download <- if (NROW(currentRow) > 0) currentRow$download else ""
-      newRow$hadoop_label <- currentRow$hadoop
-      newRow$hadoop_default <- if (NROW(currentRow) > 0) {
-        if (compareVersion(currentRow$spark, "2.0") >= 0)
+      newRow$default <- identical(currentRow$spark, "1.6.2")
+      newRow$hadoop_default <- if (compareVersion(currentRow$spark, "2.0") >= 0)
           identical(currentRow$hadoop, "2.7")
         else
           identical(currentRow$hadoop, "2.6")
-      } else FALSE
 
       mergedData <<- rbind(notCurrentRow, newRow)
     }
@@ -145,7 +147,7 @@ spark_versions_info <- function(version, hadoop_version) {
 
   version <- versions[1,]
 
-  componentName <- paste0("spark-", version$spark, "-bin-hadoop", version$hadoop)
+  componentName <- sub("\\.tgz", "", sprintf(versions$pattern, version$spark, version$hadoop))
   packageName <- paste0(componentName, ".tgz")
   packageRemotePath <- version$download
 
