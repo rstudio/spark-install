@@ -24,8 +24,9 @@ spark_uninstall(version = "1.6.2", hadoop_version = "2.6")
 
 ```
 # install from github
-import urllib
-exec urllib.urlopen("https://raw.githubusercontent.com/rstudio/spark-install/master/Python/spark_install.py?token=ADUVP5sgz9Q6fMOzasfQrS1lbfcmgl0Dks5ZOcqbwA%3D%3D").read() in globals()
+from urllib import urlopen          # Python 2.X
+from urllib.request import urlopen  # Python 3.X
+exec urlopen("https://raw.githubusercontent.com/rstudio/spark-install/master/Python/spark_install.py?token=ADUVP5sgz9Q6fMOzasfQrS1lbfcmgl0Dks5ZOcqbwA%3D%3D").read() in globals()
 
 # lists the versions available to install
 spark_versions()
@@ -34,5 +35,5 @@ spark_versions()
 spark_install(spark_version = "1.6.2")
 
 # uninstalls an specific version
-spark_uninstall(spark_version = "1.6.2", hadoop_version = "2.6")
+spark_uninstall(spark_version = "1.6.2", hadoop_version = "cdh4")
 ```
