@@ -5,7 +5,7 @@ This project provides a cross-platform installer for Apache Spark designed to us
 
 ## R
 
-```
+```r
 # install from github
 devtools::install_github(repo = "rstudio/spark-install", subdir = "R", auth_token = "bc49d1f96e29308f522660ded7728c77c790065f")
 library(sparkinstall)
@@ -22,7 +22,7 @@ spark_uninstall(version = "1.6.2", hadoop_version = "2.6")
 
 ## Python
 
-```
+```py
 # install from github
 from urllib import urlopen          # Python 2.X
 from urllib.request import urlopen  # Python 3.X
