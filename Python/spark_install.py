@@ -7,7 +7,7 @@ import logging
 import argparse
 
 # Set up Logging parameters #
-logger = logging.getLogger()
+__logger__ = logging.getLogger()
 
 SPARK_VERSIONS_FILE_PATTERN = "spark-(.*)-bin-(?:hadoop)?(.*)"
 SPARK_VERSIONS_URL = "https://raw.githubusercontent.com/rstudio/sparklyr/master/inst/extdata/install_spark.csv"
@@ -24,28 +24,28 @@ def _verify_java():
         import re
         output = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT)
     except:
-        logger.info("Java was not found in your path. Please ensure that Java " +
-                    JAVA_REQUIRED_VERSION +
-                    " is configured correctly.")
+        __logger__.info("Java was not found in your path. Please ensure that Java " +
+                        JAVA_REQUIRED_VERSION +
+                        " is configured correctly.")
         return False
 
-    logger.debug(output)
+    __logger__.debug(output)
     match = re.search(b"(\d+\.\d+)", output)
 
     if not match:
-        logger.info("Unable to detect Java version, please install Java " +
-                    JAVA_REQUIRED_VERSION +
-                    ".")
+        __logger__.info("Unable to detect Java version, please install Java " +
+                        JAVA_REQUIRED_VERSION +
+                        ".")
         return False
 
     if match.group() != JAVA_REQUIRED_VERSION.encode('utf_8'):
-        logger.info(str(match.group()) +
-                    " detected, Java version " +
-                    JAVA_REQUIRED_VERSION +
-                    " is required.")
+        __logger__.info(str(match.group()) +
+                        " detected, Java version " +
+                        JAVA_REQUIRED_VERSION +
+                        " is required.")
         return False
 
-    logger.info("Required java version detected successfully: " + JAVA_REQUIRED_VERSION)
+    __logger__.info("Required java version detected successfully: " + JAVA_REQUIRED_VERSION)
     return True
 
 def _file_age_days(csvfile):
@@ -75,7 +75,7 @@ def spark_versions_initialize():
     spark_can_install()
     csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
     if not os.path.isfile(csvfile) or _file_age_days(csvfile) > 30:
-        logger.info("Downloading %s to %s",SPARK_VERSIONS_URL, csvfile)
+        __logger__.info("Downloading %s to %s", SPARK_VERSIONS_URL, csvfile)
         _download_file(SPARK_VERSIONS_URL, csvfile)
     import csv
     return [{"spark_version": t[0], "hadoop_version": t[1], "hadoop_label": t[2], "download": t[3], "default": (t[4].strip() == "TRUE"), "hadoop_default": (t[5].strip == "TRUE")} for t in csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
@@ -143,7 +143,7 @@ def spark_install_find(spark_version=None, hadoop_version=None, installed_only=T
                 logging.debug(elem)
             raise RuntimeError("Use spark_install(%s, %s) to install Spark" % (spark_version, hadoop_version))
         else:
-            logger.critical("Please select an available version pair for Spark and Hadoop from the following list: ")
+            __logger__.critical("Please select an available version pair for Spark and Hadoop from the following list: ")
             import csv
             csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
             eligibleVersionPairings = [{"--sparkversion": t[0], "--hadoopversion": t[1]} for t in csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
@@ -184,11 +184,11 @@ def spark_install_info(spark_version=None, hadoop_version=None):
 
 
 def spark_uninstall(spark_version, hadoop_version):
-    logger.debug("Inside uninstall routine.")
+    __logger__.debug("Inside uninstall routine.")
     info = spark_versions_info(spark_version, hadoop_version)
     spark_dir = os.path.join(spark_install_dir(), info["component_name"])
     shutil.rmtree(spark_dir, ignore_errors=True)
-    logger.debug("File tree removed.")
+    __logger__.debug("File tree removed.")
 
 
 def spark_install_dir():
@@ -283,18 +283,18 @@ def spark_set_env_vars(spark_version_dir):
             import _winreg as winreg
         except ImportError:
             import winreg
-        logger.info("Setting the following variables in your registry under HKEY_CURRENT_USER\\Environment:")
+        __logger__.info("Setting the following variables in your registry under HKEY_CURRENT_USER\\Environment:")
         for k, v in persistent_vars.items():
-            logger.info("%s = %s (REG_SZ)", k, v)
+            __logger__.info("%s = %s (REG_SZ)", k, v)
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE) as hkey:
             for value, value_data in persistent_vars.items():
                 winreg.SetValueEx(hkey, value, 0, winreg.REG_SZ, value_data)
         import win32gui, win32con
         win32gui.SendMessageTimeout(win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, "Environment", win32con.SMTO_ABORTIFHUNG, 5000)
     else:
-        logger.info("Set the following environment variables in your ~/.bashrc: ")
+        __logger__.info("Set the following environment variables in your ~/.bashrc: ")
         for k, v in persistent_vars.iteritems():
-            logger.info("export %s = %s", k, v)
+            __logger__.info("export %s = %s", k, v)
 
 
 def spark_remove_env_vars():
@@ -316,7 +316,7 @@ def spark_install_winutils(spark_dir, hadoop_version):
     candidates = glob.glob(os.path.join(spark_dir, "winutils-master", "hadoop-" + hadoop_version + "*"))
 
     if candidates == []:
-        logger.info("No compatible WinUtils found for Hadoop version %s.", hadoop_version)
+        __logger__.info("No compatible WinUtils found for Hadoop version %s.", hadoop_version)
         return
 
     os.environ["HADOOP_HOME"] = candidates[-1]
@@ -328,17 +328,17 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
 
     spark_can_install()
 
-    logger.info("Installing and configuring Spark version: %s, Hadoop version: %s",
-                info["spark_version"],
-                info["hadoop_version"])
+    __logger__.info("Installing and configuring Spark version: %s, Hadoop version: %s",
+                    info["spark_version"],
+                    info["hadoop_version"])
 
     if not os.path.isdir(info["spark_version_dir"]):
         if not os.path.isfile(info["package_local_path"]):
             import urllib
-            logger.info("Downloading %s into %s", info["package_remote_path"], info["package_local_path"])
+            __logger__.info("Downloading %s into %s", info["package_remote_path"], info["package_local_path"])
             _download_file(info["package_remote_path"], info["package_local_path"])
 
-        logger.info("Extracting %s into %s", info["package_local_path"], info["spark_dir"])
+        __logger__.info("Extracting %s into %s", info["package_local_path"], info["spark_dir"])
         import tarfile
         with tarfile.open(info["package_local_path"]) as tf:
             tf.extractall(info["spark_dir"])
@@ -380,10 +380,7 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
         spark_install_winutils(info["spark_dir"], info["hadoop_version"])
 
 
-def main():
-    # Set Logger
-    logger = logging.getLogger()
-
+def main():   
     # Create the simple file logger
     logging.basicConfig(filename="install_spark.log",
                         format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s")
@@ -392,9 +389,9 @@ def main():
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    __logger__.addHandler(handler)
 
-    logger.info("Logging started")
+    __logger__.info("Logging started")
 
     parser = argparse.ArgumentParser(description="Spark Installation Script")
     parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
@@ -405,19 +402,19 @@ def main():
 
     args = parser.parse_args()
 
-    logger.setLevel(args.loglevel)
+    __logger__.setLevel(args.loglevel)
     # Debug log the values #
-    logger.debug("Spark Version specified: %s", args.sparkversion)
-    logger.debug("Hadoop Version specified: %s", args.hadoopversion)
-    logger.debug("Uninstall argument: %s", args.Uninstall)
-    logger.debug("Information argument: %s", args.information)
+    __logger__.debug("Spark Version specified: %s", args.sparkversion)
+    __logger__.debug("Hadoop Version specified: %s", args.hadoopversion)
+    __logger__.debug("Uninstall argument: %s", args.Uninstall)
+    __logger__.debug("Information argument: %s", args.information)
 
     # Check for Uninstall or information flags and react appropriately
     if args.Uninstall:
         if args.sparkversion and args.hadoopversion:
             spark_uninstall(args.sparkversion, args.hadoopversion)
         else:
-            logger.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
+            __logger__.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
     elif args.information:
         installedversions = list(spark_installed_versions())
         for elem in installedversions:
@@ -426,14 +423,14 @@ def main():
     else:
         # Verify that the expected Java version is running on the system.
         if not _verify_java():
-            logger.critical("Unable to verify Java is available. Please install version " +
-                            JAVA_REQUIRED_VERSION +
-                            ". Check the install log for further info.")
+            __logger__.critical("Unable to verify Java is available. Please install version " +
+                                JAVA_REQUIRED_VERSION +
+                                ". Check the install log for further info.")
             sys.exit(1)
 
-        logger.debug("Prerequisites checked successfully, running installation.")
+        __logger__.debug("Prerequisites checked successfully, running installation.")
         spark_install(args.sparkversion, args.hadoopversion, True, "INFO")
-        logger.info("Install completed successfully")
+        __logger__.info("Install completed successfully")
 
 if __name__ == "__main__":
     main()
