@@ -8,59 +8,45 @@ import argparse
 
 # Set up Logging parameters #
 logger = logging.getLogger()
-handler = logging.StreamHandler()
-logging.basicConfig(filename="install_spark.log")
-formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.WARNING)
-logger.info("Logging started")
-
-parser = argparse.ArgumentParser(description="Spark Installation Script")
-parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
-parser.add_argument("-hv", "--hadoopversion", help="Hadoop Version to be used.", required=False)
-parser.add_argument("-U", "--Uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
-parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
-
-args = parser.parse_args()
-# Debug log the values #
-logger.debug("Spark Version specified: %s" % args.sparkversion)
-logger.debug("Hadoop Version specified: %s" % args.hadoopversion)
-logger.debug("Uninstall argument: %s" % args.Uninstall)
-logger.debug("Information argument: %s" % args.information)
 
 SPARK_VERSIONS_FILE_PATTERN = "spark-(.*)-bin-(?:hadoop)?(.*)"
 SPARK_VERSIONS_URL = "https://raw.githubusercontent.com/rstudio/sparklyr/master/inst/extdata/install_spark.csv"
 WINUTILS_URL = "https://github.com/steveloughran/winutils/archive/master.zip"
 
-NL = os.linesep
+JAVA_REQUIRED_VERSION = '1.8'
 
+NL = os.linesep
 
 def _verify_java():
     import subprocess
+
     try:
         import re
         output = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT)
-        logger.debug(output)
-
-        match = re.search(b"(\d+\.\d+)", output)
-
-        if match:
-            logger.debug("Found a match")
-            if match.group() == b'1.8':
-                logger.info("Found Java version 8, continuing.")
-                return True
-            else:
-                logger.info("Did not detect Java Version 8, please install Java 8 before continuing.")
-                return False
-        else:
-            logger.info("Java could not be detected on this system, please install Java 8 before continuing.")
-            return False
-
     except:
-        logger.info("Warning: Java was not found in your path. Please ensure that Java 8 is configured correctly otherwise launching the gateway will fail")
+        logger.info("Java was not found in your path. Please ensure that Java " +
+                    JAVA_REQUIRED_VERSION +
+                    " is configured correctly.")
         return False
 
+    logger.debug(output)
+    match = re.search(b"(\d+\.\d+)", output)
+
+    if not match:
+        logger.info("Unable to detect Java version, please install Java " +
+                    JAVA_REQUIRED_VERSION +
+                    ".")
+        return False
+
+    if match.group() != JAVA_REQUIRED_VERSION.encode('utf_8'):
+        logger.info(str(match.group()) +
+                    " detected, Java version " +
+                    JAVA_REQUIRED_VERSION +
+                    " is required.")
+        return False
+
+    logger.info("Required java version detected successfully: " + JAVA_REQUIRED_VERSION)
+    return True
 
 def _file_age_days(csvfile):
     from datetime import datetime
@@ -79,7 +65,6 @@ def _download_file(url, local_file):
         from urllib.request import urlretrieve
     urlretrieve(url, local_file)
 
-
 def spark_can_install():
     install_dir = spark_install_dir()
     if not os.path.isdir(install_dir):
@@ -90,7 +75,7 @@ def spark_versions_initialize():
     spark_can_install()
     csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
     if not os.path.isfile(csvfile) or _file_age_days(csvfile) > 30:
-        logger.info("Downloading %s to %s" % (SPARK_VERSIONS_URL, csvfile))
+        logger.info("Downloading %s to %s",SPARK_VERSIONS_URL, csvfile)
         _download_file(SPARK_VERSIONS_URL, csvfile)
     import csv
     return [{"spark_version": t[0], "hadoop_version": t[1], "hadoop_label": t[2], "download": t[3], "default": (t[4].strip() == "TRUE"), "hadoop_default": (t[5].strip == "TRUE")} for t in csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
@@ -300,7 +285,7 @@ def spark_set_env_vars(spark_version_dir):
             import winreg
         logger.info("Setting the following variables in your registry under HKEY_CURRENT_USER\\Environment:")
         for k, v in persistent_vars.items():
-            logger.info("%s = %s (REG_SZ)" % (k, v))
+            logger.info("%s = %s (REG_SZ)", k, v)
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE) as hkey:
             for value, value_data in persistent_vars.items():
                 winreg.SetValueEx(hkey, value, 0, winreg.REG_SZ, value_data)
@@ -309,7 +294,7 @@ def spark_set_env_vars(spark_version_dir):
     else:
         logger.info("Set the following environment variables in your ~/.bashrc: ")
         for k, v in persistent_vars.iteritems():
-            logger.info("export %s = %s" % (k, v))
+            logger.info("export %s = %s", k, v)
 
 
 def spark_remove_env_vars():
@@ -331,7 +316,7 @@ def spark_install_winutils(spark_dir, hadoop_version):
     candidates = glob.glob(os.path.join(spark_dir, "winutils-master", "hadoop-" + hadoop_version + "*"))
 
     if candidates == []:
-        logger.info("No compatible WinUtils found for Hadoop version %s." % hadoop_version)
+        logger.info("No compatible WinUtils found for Hadoop version %s.", hadoop_version)
         return
 
     os.environ["HADOOP_HOME"] = candidates[-1]
@@ -343,15 +328,17 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
 
     spark_can_install()
 
-    logger.info("Installing and configuring Spark version: %s, Hadoop version: %s" % (info["spark_version"], info["hadoop_version"]))
+    logger.info("Installing and configuring Spark version: %s, Hadoop version: %s",
+                info["spark_version"],
+                info["hadoop_version"])
 
     if not os.path.isdir(info["spark_version_dir"]):
         if not os.path.isfile(info["package_local_path"]):
             import urllib
-            logger.info("Downloading %s into %s" % (info["package_remote_path"], info["package_local_path"]))
+            logger.info("Downloading %s into %s", info["package_remote_path"], info["package_local_path"])
             _download_file(info["package_remote_path"], info["package_local_path"])
 
-        logger.info("Extracting %s into %s" % (info["package_local_path"], info["spark_dir"]))
+        logger.info("Extracting %s into %s", info["package_local_path"], info["spark_dir"])
         import tarfile
         with tarfile.open(info["package_local_path"]) as tf:
             tf.extractall(info["spark_dir"])
@@ -394,6 +381,37 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
 
 
 def main():
+    # Set Logger
+    logger = logging.getLogger()
+
+    # Create the simple file logger
+    logging.basicConfig(filename="install_spark.log",
+                        format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s")
+
+    # Update the default root (console) logger
+    formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.info("Logging started")
+
+    parser = argparse.ArgumentParser(description="Spark Installation Script")
+    parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
+    parser.add_argument("-hv", "--hadoopversion", help="Hadoop Version to be used.", required=False)
+    parser.add_argument("-U", "--Uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
+    parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
+    parser.add_argument("-l", "--loglevel", help="Set the install scripts logging level (DEBUG, INFO, WARN, ERROR, CRITICAL)", default="INFO", required=False)    
+
+    args = parser.parse_args()
+
+    logger.setLevel(args.loglevel)
+    # Debug log the values #
+    logger.debug("Spark Version specified: %s", args.sparkversion)
+    logger.debug("Hadoop Version specified: %s", args.hadoopversion)
+    logger.debug("Uninstall argument: %s", args.Uninstall)
+    logger.debug("Information argument: %s", args.information)
+
     # Check for Uninstall or information flags and react appropriately
     if args.Uninstall:
         if args.sparkversion and args.hadoopversion:
@@ -406,16 +424,16 @@ def main():
             logging.info(elem)
         return installedversions
     else:
-        # Verify that Java 1.8 is running on the system and if it is, run the install.
-        if _verify_java():
-            logger.debug("Prerequisites checked successfully, running installation.")
-            logger.debug("Spark Version: %s" % args.sparkversion)
-            logger.debug("Hadoop Version: %s" % args.hadoopversion)
-            spark_install(args.sparkversion, args.hadoopversion, True, "INFO")
-            logger.debug("Completed the install")
-        else:
-            logger.critical("A prerequisite for installation has not been satisfied. Please check output log for details.")
+        # Verify that the expected Java version is running on the system.
+        if not _verify_java():
+            logger.critical("Unable to verify Java is available. Please install version " +
+                            JAVA_REQUIRED_VERSION +
+                            ". Check the install log for further info.")
+            sys.exit(1)
 
+        logger.debug("Prerequisites checked successfully, running installation.")
+        spark_install(args.sparkversion, args.hadoopversion, True, "INFO")
+        logger.info("Install completed successfully")
 
 if __name__ == "__main__":
     main()
