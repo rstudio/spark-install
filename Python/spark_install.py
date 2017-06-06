@@ -16,25 +16,11 @@ logger.addHandler(handler)
 logger.setLevel(logging.WARNING)
 logger.info("Logging started")
 
-parser = argparse.ArgumentParser(description="Spark Installation Script")
-parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
-parser.add_argument("-hv", "--hadoopversion", help="Hadoop Version to be used.", required=False)
-parser.add_argument("-U", "--Uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
-parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
-
-args = parser.parse_args()
-# Debug log the values #
-logger.debug("Spark Version specified: %s" % args.sparkversion)
-logger.debug("Hadoop Version specified: %s" % args.hadoopversion)
-logger.debug("Uninstall argument: %s" % args.Uninstall)
-logger.debug("Information argument: %s" % args.information)
-
 SPARK_VERSIONS_FILE_PATTERN = "spark-(.*)-bin-(?:hadoop)?(.*)"
 SPARK_VERSIONS_URL = "https://raw.githubusercontent.com/rstudio/sparklyr/master/inst/extdata/install_spark.csv"
 WINUTILS_URL = "https://github.com/steveloughran/winutils/archive/master.zip"
 
 NL = os.linesep
-
 
 def _verify_java():
     import subprocess
@@ -394,6 +380,20 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Spark Installation Script")
+    parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
+    parser.add_argument("-hv", "--hadoopversion", help="Hadoop Version to be used.", required=False)
+    parser.add_argument("-U", "--Uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
+    parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
+
+    args = parser.parse_args()
+    
+    # Debug log the values #
+    logger.debug("Spark Version specified: %s" % args.sparkversion)
+    logger.debug("Hadoop Version specified: %s" % args.hadoopversion)
+    logger.debug("Uninstall argument: %s" % args.Uninstall)
+    logger.debug("Information argument: %s" % args.information)
+
     # Check for Uninstall or information flags and react appropriately
     if args.Uninstall:
         if args.sparkversion and args.hadoopversion:
