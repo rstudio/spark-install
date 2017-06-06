@@ -5,7 +5,7 @@ spark_versions_file_pattern <- function() {
 }
 
 spark_versions_url <- function() {
-  "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json?token=ADUVPw4fKGhvEGx7NSCmljaNIUzES1rnks5ZOdMmwA%3D%3D"
+  "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json"
 }
 
 #' @importFrom jsonlite fromJSON
