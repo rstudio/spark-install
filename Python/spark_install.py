@@ -381,23 +381,23 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
 
 def main():
     parser = argparse.ArgumentParser(description="Spark Installation Script")
-    parser.add_argument("-sv", "--sparkversion", help="Spark Version to be used.", required=False)
-    parser.add_argument("-hv", "--hadoopversion", help="Hadoop Version to be used.", required=False)
-    parser.add_argument("-U", "--Uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
+    parser.add_argument("-sv", "--spark-version", help="Spark Version to be used.", required=False, dest="spark_version")
+    parser.add_argument("-hv", "--hadoop-version", help="Hadoop Version to be used.", required=False, dest="hadoop_version")
+    parser.add_argument("-u", "--uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
     parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
 
     args = parser.parse_args()
     
     # Debug log the values #
-    logger.debug("Spark Version specified: %s" % args.sparkversion)
-    logger.debug("Hadoop Version specified: %s" % args.hadoopversion)
-    logger.debug("Uninstall argument: %s" % args.Uninstall)
+    logger.debug("Spark Version specified: %s" % args.spark_version)
+    logger.debug("Hadoop Version specified: %s" % args.hadoop_version)
+    logger.debug("Uninstall argument: %s" % args.uninstall)
     logger.debug("Information argument: %s" % args.information)
 
-    # Check for Uninstall or information flags and react appropriately
-    if args.Uninstall:
-        if args.sparkversion and args.hadoopversion:
-            spark_uninstall(args.sparkversion, args.hadoopversion)
+    # Check for uninstall or information flags and react appropriately
+    if args.uninstall:
+        if args.spark_version and args.hadoop_version:
+            spark_uninstall(args.spark_version, args.hadoop_version)
         else:
             logger.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
     elif args.information:
@@ -409,9 +409,9 @@ def main():
         # Verify that Java 1.8 is running on the system and if it is, run the install.
         if _verify_java():
             logger.debug("Prerequisites checked successfully, running installation.")
-            logger.debug("Spark Version: %s" % args.sparkversion)
-            logger.debug("Hadoop Version: %s" % args.hadoopversion)
-            spark_install(args.sparkversion, args.hadoopversion, True, "INFO")
+            logger.debug("Spark Version: %s" % args.spark_version)
+            logger.debug("Hadoop Version: %s" % args.hadoop_version)
+            spark_install(args.spark_version, args.hadoop_version, True, "INFO")
             logger.debug("Completed the install")
         else:
             logger.critical("A prerequisite for installation has not been satisfied. Please check output log for details.")

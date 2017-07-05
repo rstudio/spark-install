@@ -26,7 +26,7 @@ class TestSparkInstall(unittest.TestCase):
             assert(), "test_word_count has failed."
 
     def test_4_uninstall(self):
-        if subprocess.call("python spark_install.py -U -sv " + sparkversion + " -hv " + hadoopversion) < 0:
+        if subprocess.call("python spark_install.py -u -sv " + sparkversion + " -hv " + hadoopversion) < 0:
             assert(), "Uninstall process failed."
 
     def test_5_if_install_removed(self):
