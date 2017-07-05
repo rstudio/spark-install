@@ -52,7 +52,7 @@ spark_default_version <- function() {
     hadoop <- version$hadoopVersion
     # otherwise check available versions and take the default
   } else {
-    versions <- read_spark_versions_csv()
+    versions <- read_spark_versions_json()
     versions <- subset(versions, versions$default == TRUE & versions$hadoop_default == TRUE)
     version <- versions[1,]
     spark <- version$spark
@@ -109,6 +109,7 @@ spark_home <- function() {
 #'
 #' @return List with information about the installed version.
 #'
+#' @import utils
 #' @export
 spark_install <- function(version = NULL,
                           hadoop_version = NULL,
@@ -259,7 +260,7 @@ spark_resolve_envpath <- function(path_with_end) {
 #' @export
 spark_install_dir <- function() {
   config <- fromJSON(
-    system.file("data/config.json", package = "sparkinstall")
+    system.file("extdata/config.json", package = "sparkinstall")
   )
 
   getOption("spark.install.dir", spark_resolve_envpath(config$dirs[[.Platform$OS.type]]))

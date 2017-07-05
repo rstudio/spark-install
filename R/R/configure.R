@@ -1,4 +1,9 @@
-#' @rdname spark_install
+#' Configures a local installation of Spark
+#'
+#' Configures a local Spark installation.
+#'
+#' @param spark_home The path to a Spark installation.
+#'
 #' @export
 spark_configure <- function(spark_home)
 {
