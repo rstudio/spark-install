@@ -4,7 +4,10 @@
 \alias{spark_default_version}
 \title{determine the version that will be used by default if version is NULL}
 \usage{
-spark_default_version()
+spark_default_version(paths = NULL)
+}
+\arguments{
+\item{paths}{Additional paths used to search for Spark installs.}
 }
 \description{
 determine the version that will be used by default if version is NULL
