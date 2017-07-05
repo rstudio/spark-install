@@ -103,6 +103,15 @@ spark_versions <- function(latest = TRUE) {
   downloadData$default <- rep(FALSE, NROW(downloadData))
   downloadData$hadoop_default <- rep(FALSE, NROW(downloadData))
 
+  # apply spark and hadoop versions
+  downloadData[downloadData$spark == "2.1.0" & downloadData$hadoop == "2.7", ]$default <- TRUE
+  lapply(unique(downloadData$spark), function(version) {
+    validVersions <- downloadData[grepl("2", downloadData$hadoop) & downloadData$spark == version, ]
+    maxHadoop <- validVersions[with(validVersions, order(hadoop, decreasing = TRUE)), ]$hadoop[[1]]
+
+    downloadData[downloadData$spark == version & downloadData$hadoop == maxHadoop, ]$hadoop_default <<- TRUE
+  })
+
   mergedData <- downloadData
   lapply(
     Filter(function(e) !is.null(e),
