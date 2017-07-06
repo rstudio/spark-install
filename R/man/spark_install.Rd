@@ -11,18 +11,18 @@
 \title{Find a given Spark installation by version.}
 \usage{
 spark_install_find(version = NULL, hadoop_version = NULL,
-  installed_only = TRUE, latest = FALSE, hint = FALSE, paths = NULL)
+  installed_only = TRUE, latest = FALSE, hint = FALSE)
 
 spark_install(version = NULL, hadoop_version = NULL, reset = TRUE,
-  logging = "INFO", verbose = interactive(), paths = NULL)
+  logging = "INFO", verbose = interactive())
 
-spark_uninstall(version, hadoop_version, paths = NULL)
+spark_uninstall(version, hadoop_version)
 
 spark_install_dir()
 
 spark_install_tar(tarfile)
 
-spark_installed_versions(paths = NULL)
+spark_installed_versions()
 
 spark_available_versions()
 }
@@ -37,8 +37,6 @@ spark_available_versions()
 
 \item{hint}{On failure should the installation code be provided?}
 
-\item{paths}{Additional paths used to search for Spark installs.}
-
 \item{reset}{Attempts to reset settings to defaults.}
 
 \item{logging}{Logging level to configure install. Supported options: "WARN", "INFO"}
@@ -47,10 +45,6 @@ spark_available_versions()
 
 \item{tarfile}{Path to TAR file conforming to the pattern spark-###-bin-(hadoop)?### where ###
 reference spark and hadoop versions respectively.}
-
-\item{paths}{Additional paths used to search for Spark installs.}
-
-\item{paths}{Additional paths used to search for Spark installs.}
 }
 \value{
 List with information about the installed version.
