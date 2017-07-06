@@ -27,13 +27,12 @@ spark_install_find <- function(version = NULL,
                                hadoop_version = NULL,
                                installed_only = TRUE,
                                latest = FALSE,
-                               hint = FALSE,
-                               paths = NULL) {
+                               hint = FALSE) {
   sparkVersion <- version
   hadoopVersion <- hadoop_version
   installedOnly <- installed_only
 
-  versions <- spark_versions(latest = latest, paths = paths)
+  versions <- spark_versions(latest = latest)
   if (installedOnly)
     versions <- versions[versions$installed, ]
   versions <- if (is.null(sparkVersion)) versions else versions[versions$spark == sparkVersion, ]
@@ -52,19 +51,18 @@ spark_install_find <- function(version = NULL,
   }
 
   versions <- versions[with(versions, order(-default, -hadoop_default)), ]
-  spark_install_info(as.character(versions[1,]$spark), as.character(versions[1,]$hadoop), paths = paths)
+  spark_install_info(as.character(versions[1,]$spark), as.character(versions[1,]$hadoop))
 }
 
 #' determine the version that will be used by default if version is NULL
+#'
 #' @export
 #'
-#' @param paths Additional paths used to search for Spark installs.
-#'
 #' @keywords internal
-spark_default_version <- function(paths = NULL) {
+spark_default_version <- function() {
   # if we have versions installed then use the same logic as spark_connect to figure out
   # which version we will bind to when we pass version = NULL and hadoop_version = NULL
-  if (nrow(spark_installed_versions(paths)) > 0) {
+  if (nrow(spark_installed_versions()) > 0) {
     version <- spark_install_find(version = NULL, hadoop_version = NULL, installed_only = TRUE, latest = FALSE)
     spark <- version$sparkVersion
     hadoop <- version$hadoopVersion
@@ -81,14 +79,14 @@ spark_default_version <- function(paths = NULL) {
        hadoop = hadoop)
 }
 
-spark_install_info <- function(sparkVersion = NULL, hadoopVersion = NULL, paths = NULL) {
+spark_install_info <- function(sparkVersion = NULL, hadoopVersion = NULL) {
   versionInfo <- spark_versions_info(sparkVersion, hadoopVersion)
 
   componentName <- versionInfo$componentName
   packageName <- versionInfo$packageName
   packageRemotePath <- versionInfo$packageRemotePath
 
-  sparkDir <- c(paths, spark_install_dir())
+  sparkDir <- c(spark_install_old_dir(), spark_install_dir())
 
   sparkVersionDir <- file.path(sparkDir, componentName)
   sparkDir <- sparkDir[dir.exists(sparkVersionDir)]
@@ -128,7 +126,6 @@ spark_home <- function() {
 #' @param verbose Report information as Spark is downloaded / installed
 #' @param tarfile Path to TAR file conforming to the pattern spark-###-bin-(hadoop)?### where ###
 #' reference spark and hadoop versions respectively.
-#' @param paths Additional paths used to search for Spark installs.
 #'
 #' @return List with information about the installed version.
 #'
@@ -138,10 +135,9 @@ spark_install <- function(version = NULL,
                           hadoop_version = NULL,
                           reset = TRUE,
                           logging = "INFO",
-                          verbose = interactive(),
-                          paths = NULL)
+                          verbose = interactive())
 {
-  installInfo <- spark_install_find(version, hadoop_version, installed_only = FALSE, latest = TRUE, paths = paths)
+  installInfo <- spark_install_find(version, hadoop_version, installed_only = FALSE, latest = TRUE)
 
   if (!dir.exists(installInfo$sparkDir)) {
     dir.create(installInfo$sparkDir, recursive = TRUE)
@@ -254,12 +250,10 @@ spark_install <- function(version = NULL,
 
 #' @rdname spark_install
 #'
-#' @param paths Additional paths used to search for Spark installs.
-#'
 #' @export
-spark_uninstall <- function(version, hadoop_version, paths = NULL) {
+spark_uninstall <- function(version, hadoop_version) {
   info <- spark_versions_info(version, hadoop_version)
-  sparkDir <- file.path(c(paths, spark_install_dir()), info$componentName)
+  sparkDir <- file.path(c(spark_install_old_dir(), spark_install_dir()), info$componentName)
   if (any(dir.exists(sparkDir))) {
     unlink(sparkDir, recursive = TRUE)
     message(info$componentName, " successfully uninstalled.")
@@ -291,6 +285,11 @@ spark_install_dir <- function() {
   )
 
   getOption("spark.install.dir", spark_resolve_envpath(config$dirs[[.Platform$OS.type]]))
+}
+
+# Used for backwards compatibility with sparklyr 0.5 installation path
+spark_install_old_dir <- function() {
+  getOption("spark.install.dir", rappdirs::app_dir("spark", "rstudio")$cache())
 }
 
 #' @rdname spark_install

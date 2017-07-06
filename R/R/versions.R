@@ -24,19 +24,17 @@ read_spark_versions_json <- function(file = spark_versions_url()) {
 
 #' @rdname spark_install
 #'
-#' @param paths Additional paths used to search for Spark installs.
-#'
 #' @examples
 #'
 #' spark_installed_versions()
 #'
 #' @export
-spark_installed_versions <- function(paths = NULL) {
+spark_installed_versions <- function() {
 
   spark <- character()
   hadoop <- character()
   dir <- character()
-  lapply(dir(c(paths, spark_install_dir()), full.names = TRUE), function(maybeDir) {
+  lapply(dir(c(spark_install_old_dir(), spark_install_dir()), full.names = TRUE), function(maybeDir) {
     if (dir.exists(maybeDir)) {
       fileName <- basename(maybeDir)
       m <- regmatches(fileName, regexec(spark_versions_file_pattern(), fileName))[[1]]
@@ -68,8 +66,7 @@ spark_available_versions <- function() {
   versions
 }
 
-
-spark_versions <- function(latest = TRUE, paths = NULL) {
+spark_versions <- function(latest = TRUE) {
 
   # This function might be called during a custom configuration and the package
   # will not be available at that time; allow overriding with environment variable
@@ -118,7 +115,7 @@ spark_versions <- function(latest = TRUE, paths = NULL) {
   mergedData <- downloadData
   lapply(
     Filter(function(e) !is.null(e),
-           lapply(dir(c(paths, spark_install_dir()), full.names = TRUE), function(maybeDir) {
+           lapply(dir(c(spark_install_old_dir(), spark_install_dir()), full.names = TRUE), function(maybeDir) {
              if (dir.exists(maybeDir)) {
                fileName <- basename(maybeDir)
                m <- regmatches(fileName, regexec(spark_versions_file_pattern(), fileName))[[1]]
