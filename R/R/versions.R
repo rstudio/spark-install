@@ -23,13 +23,20 @@ read_spark_versions_json <- function(file = spark_versions_url()) {
 
 
 #' @rdname spark_install
+#'
+#' @param paths Additional paths used to search for Spark installs.
+#'
+#' @examples
+#'
+#' spark_installed_versions()
+#'
 #' @export
-spark_installed_versions <- function() {
+spark_installed_versions <- function(paths = NULL) {
 
   spark <- character()
   hadoop <- character()
   dir <- character()
-  lapply(dir(spark_install_dir(), full.names = TRUE), function(maybeDir) {
+  lapply(dir(c(paths, spark_install_dir()), full.names = TRUE), function(maybeDir) {
     if (dir.exists(maybeDir)) {
       fileName <- basename(maybeDir)
       m <- regmatches(fileName, regexec(spark_versions_file_pattern(), fileName))[[1]]
@@ -62,7 +69,7 @@ spark_available_versions <- function() {
 }
 
 
-spark_versions <- function(latest = TRUE) {
+spark_versions <- function(latest = TRUE, paths = NULL) {
 
   # This function might be called during a custom configuration and the package
   # will not be available at that time; allow overriding with environment variable
@@ -70,7 +77,7 @@ spark_versions <- function(latest = TRUE) {
   packagePath <- if (!is.na(packagePathEnv))
     packagePathEnv
   else
-    system.file(file.path("data", "versions.json"), package = "sparkinstall")
+    system.file(file.path("extdata", "versions.json"), package = "sparkinstall")
 
   downloadData <- NULL
   if (latest) {
@@ -99,10 +106,19 @@ spark_versions <- function(latest = TRUE) {
   downloadData$default <- rep(FALSE, NROW(downloadData))
   downloadData$hadoop_default <- rep(FALSE, NROW(downloadData))
 
+  # apply spark and hadoop versions
+  downloadData[downloadData$spark == "2.1.0" & downloadData$hadoop == "2.7", ]$default <- TRUE
+  lapply(unique(downloadData$spark), function(version) {
+    validVersions <- downloadData[grepl("2", downloadData$hadoop) & downloadData$spark == version, ]
+    maxHadoop <- validVersions[with(validVersions, order(hadoop, decreasing = TRUE)), ]$hadoop[[1]]
+
+    downloadData[downloadData$spark == version & downloadData$hadoop == maxHadoop, ]$hadoop_default <<- TRUE
+  })
+
   mergedData <- downloadData
   lapply(
     Filter(function(e) !is.null(e),
-           lapply(dir(spark_install_dir(), full.names = TRUE), function(maybeDir) {
+           lapply(dir(c(paths, spark_install_dir()), full.names = TRUE), function(maybeDir) {
              if (dir.exists(maybeDir)) {
                fileName <- basename(maybeDir)
                m <- regmatches(fileName, regexec(spark_versions_file_pattern(), fileName))[[1]]
