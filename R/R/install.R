@@ -88,7 +88,11 @@ spark_install_info <- function(sparkVersion = NULL, hadoopVersion = NULL, paths 
   packageName <- versionInfo$packageName
   packageRemotePath <- versionInfo$packageRemotePath
 
-  sparkDir <- c(spark_install_dir(), paths)[[1]]
+  sparkDir <- c(paths, spark_install_dir())
+
+  sparkVersionDir <- file.path(sparkDir, componentName)
+  sparkDir <- sparkDir[dir.exists(sparkVersionDir)]
+  sparkDir <- if (length(sparkDir) == 0) spark_install_dir() else sparkDir[[1]]
 
   sparkVersionDir <- file.path(sparkDir, componentName)
 
