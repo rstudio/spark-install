@@ -67,7 +67,8 @@ def spark_versions_initialize(connecting=False):
     if not os.path.isfile(jsonfile) or _file_age_days(jsonfile) > 30 or connecting:
         logging.info("Downloading %s to %s" % (SPARK_VERSIONS_URL, jsonfile))
         _download_file(SPARK_VERSIONS_URL, jsonfile)
-    return json.load(open(jsonfile))
+    with open(jsonfile) as jf:
+        return json.load(jf)
 
 def spark_versions(connecting=False):
     versions = spark_versions_initialize(connecting)
@@ -269,7 +270,7 @@ def spark_set_env_vars(spark_version_dir):
             logging.warning("Could not refresh the registry, please install the PyWin32 package")
     else:
         logging.info("Set the following environment variables in your initialization file such as ~/.bashrc: ")
-        for k, v in persistent_vars.iteritems():
+        for k, v in persistent_vars.items():
             logging.info("export %s = %s" % (k, v))
 
 def spark_remove_env_vars():
@@ -382,9 +383,10 @@ def main():
             logging.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
     elif args.information:
         installedversions = list(spark_installed_versions())
+        fmt = "{:>8}| {:>8}| {:<}"
+        print(fmt.format("Spark", "Hadoop", "Location"))        
         for elem in installedversions:
-            logging.info(elem)
-        return installedversions
+            print(fmt.format(elem["spark"], elem["hadoop"], elem["dir"]))
     else:
         # Verify that Java 1.8 is running on the system and if it is, run the install.
         if _verify_java():
