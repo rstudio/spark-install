@@ -10,9 +10,9 @@ Authors@R: c(
     person(family = "The Apache Software Foundation", role = c("aut", "cph"))
     )
 Maintainer: Javier Luraschi <javier@rstudio.com>
-Description: This package provides support to install Apache Spark
-    from R. Intented to be a shared effort across software applications
-    to minimize use of system resources.
+Description: R installer for Apache Spark, a fast and general engine for big data
+    processing, see <http://spark.apache.org>. Intented to be a shared effort across
+    software packages to minimize use of system resources.
 License: Apache License 2.0
 SystemRequirements: Spark: 1.6.x or 2.x
 URL: https://github.com/rstudio/spark-install
