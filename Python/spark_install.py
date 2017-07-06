@@ -1,23 +1,11 @@
-
 import os
 import re
 import sys
 import shutil
 import logging
-import argparse
-
-# Set up Logging parameters #
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-logging.basicConfig(filename="install_spark.log")
-formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.WARNING)
-logger.info("Logging started")
 
 SPARK_VERSIONS_FILE_PATTERN = "spark-(.*)-bin-(?:hadoop)?(.*)"
-SPARK_VERSIONS_URL = "https://raw.githubusercontent.com/rstudio/sparklyr/master/inst/extdata/install_spark.csv"
+SPARK_VERSIONS_URL = "https://raw.githubusercontent.com/rstudio/spark-install/master/common/versions.json"
 WINUTILS_URL = "https://github.com/steveloughran/winutils/archive/master.zip"
 
 NL = os.linesep
@@ -27,30 +15,30 @@ def _verify_java():
     try:
         import re
         output = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT)
-        logger.debug(output)
+        logging.debug(output)
 
         match = re.search(b"(\d+\.\d+)", output)
 
         if match:
-            logger.debug("Found a match")
+            logging.debug("Found a match")
             if match.group() == b'1.8':
-                logger.info("Found Java version 8, continuing.")
+                logging.info("Found Java version 8, continuing.")
                 return True
             else:
-                logger.info("Did not detect Java Version 8, please install Java 8 before continuing.")
+                logging.info("Did not detect Java Version 8, please install Java 8 before continuing.")
                 return False
         else:
-            logger.info("Java could not be detected on this system, please install Java 8 before continuing.")
+            logging.info("Java could not be detected on this system, please install Java 8 before continuing.")
             return False
 
     except:
-        logger.info("Warning: Java was not found in your path. Please ensure that Java 8 is configured correctly otherwise launching the gateway will fail")
+        logging.info("Warning: Java was not found in your path. Please ensure that Java 8 is configured correctly otherwise launching the gateway will fail")
         return False
 
 
-def _file_age_days(csvfile):
+def _file_age_days(jsonfile):
     from datetime import datetime
-    ctime = os.stat(csvfile).st_ctime
+    ctime = os.stat(jsonfile).st_ctime
     return (datetime.fromtimestamp(ctime) - datetime.now()).days
 
 
@@ -72,36 +60,32 @@ def spark_can_install():
         os.makedirs(install_dir)
 
 
-def spark_versions_initialize():
+def spark_versions_initialize(connecting=False):
+    import json
     spark_can_install()
-    csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
-    if not os.path.isfile(csvfile) or _file_age_days(csvfile) > 30:
-        logger.info("Downloading %s to %s" % (SPARK_VERSIONS_URL, csvfile))
-        _download_file(SPARK_VERSIONS_URL, csvfile)
-    import csv
-    return [{"spark_version": t[0], "hadoop_version": t[1], "hadoop_label": t[2], "download": t[3], "default": (t[4].strip() == "TRUE"), "hadoop_default": (t[5].strip == "TRUE")} for t in csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
+    jsonfile = os.path.join(spark_install_dir(), "versions.json")
+    if not os.path.isfile(jsonfile) or _file_age_days(jsonfile) > 30 or connecting:
+        logging.info("Downloading %s to %s" % (SPARK_VERSIONS_URL, jsonfile))
+        _download_file(SPARK_VERSIONS_URL, jsonfile)
+    with open(jsonfile) as jf:
+        return json.load(jf)
 
-
-def spark_versions():
-    versions = spark_versions_initialize()
-    installed = set([_combine_versions(v["spark_version"], v["hadoop_version"]) for v in spark_installed_versions()])
-    for v in versions: v["installed"] = _combine_versions(v["spark_version"], v["hadoop_version"]) in installed
+def spark_versions(connecting=False):
+    versions = spark_versions_initialize(connecting)
+    installed = set([_combine_versions(v["spark"], v["hadoop"]) for v in spark_installed_versions()])
+    for v in versions: v["installed"] = _combine_versions(v["spark"], v["hadoop"]) in installed
     return versions
 
 
 def spark_versions_info(spark_version, hadoop_version):
-    versions = filter(lambda v: v["spark_version"] == spark_version and v["hadoop_version"] == hadoop_version, spark_versions())
-    versions = list(versions)
-    if len(versions) == 0:
+    versions = [v for v in spark_versions() if v["spark"] == spark_version and v["hadoop"] == hadoop_version]
+
+    if versions == []:
         raise ValueError("Unable to find Spark version: %s and Hadoop version: %s" % (spark_version, hadoop_version))
 
-    component_name = "".join(("spark-", spark_version, "-bin-hadoop", hadoop_version))
-    #CDH4 Hadoop version has different file naming convention.
-    if hadoop_version == "cdh4":
-        component_name = "".join(("spark-", spark_version, "-bin-", hadoop_version))
-
-    package_name = component_name + ".tgz"
-    package_remote_path = versions[0]["download"]
+    package_name = versions[0]["pattern"]%(spark_version, hadoop_version)
+    component_name = os.path.splitext(package_name)[0]
+    package_remote_path = versions[0]["base"] + package_name
 
     return {"component_name": component_name,
             "package_name": package_name,
@@ -115,56 +99,48 @@ def spark_installed_versions():
         match = re.match(SPARK_VERSIONS_FILE_PATTERN, candidate)
         fullpath = os.path.join(base_dir, candidate)
         if os.path.isdir(fullpath) and match:
-            versions.append({"spark_version": match.group(1), "hadoop_version": match.group(2), "dir": fullpath})
+            versions.append({"spark": match.group(1), "hadoop": match.group(2), "dir": fullpath})
     return versions
 
 
 def spark_install_available(spark_version, hadoop_version):
-    info = spark_versions_info(spark_version, hadoop_version)
+    info = spark_install_info(spark_version, hadoop_version)
     return os.path.isdir(info["spark_version_dir"])
 
 
 def spark_install_find(spark_version=None, hadoop_version=None, installed_only=True, connecting=False):
-    versions = spark_versions()
+    versions = spark_versions(connecting)
     if installed_only:
         versions = filter(lambda v: v["installed"], versions)
     if spark_version:
-        versions = filter(lambda v: v["spark_version"] == spark_version, versions)
+        versions = filter(lambda v: v["spark"] == spark_version, versions)
     if hadoop_version:
-        versions = filter(lambda v: v["hadoop_version"] == hadoop_version, versions)
+        versions = filter(lambda v: v["hadoop"] == hadoop_version, versions)
     versions = list(versions)
-    if len(versions) == 0:
-        if connecting:
-            import csv
-            csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
-            eligibleVersionPairings = [{"sparkversion": t[0], "hadoopversion": t[1]} for t in
-                                       csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
-            logging.debug("Available Spark and Hadoop version pairings: ")
-            for elem in eligibleVersionPairings:
-                logging.debug(elem)
-            raise RuntimeError("Use spark_install(%s, %s) to install Spark" % (spark_version, hadoop_version))
-        else:
-            logger.critical("Please select an available version pair for Spark and Hadoop from the following list: ")
-            import csv
-            csvfile = os.path.join(spark_install_dir(), "install_spark.csv")
-            eligibleVersionPairings = [{"--sparkversion": t[0], "--hadoopversion": t[1]} for t in csv.reader(open(csvfile, "r").readlines()[1:]) if len(t) == 6]
-            for elem in eligibleVersionPairings:
-                logging.critical(elem)
-            raise RuntimeError("Please select a valid pair of Spark and Hadoop versions to download.")
 
-    candidate = sorted(versions, key=lambda rec: rec["spark_version"] + " " + rec["hadoop_version"])[-1]
-    return spark_install_info(candidate["spark_version"], candidate["hadoop_version"])
+    if versions == []:
+        logging.critical("Please select an available version pair for Spark and Hadoop from the following list: ")
+        available_versions = spark_versions_initialize(connecting)
+        sep = "+" + "-"*18 + "+"
+        fmt = "|{:>8}| {:>8}|"
+        logging.critical(NL + NL.join([sep] + 
+                                 [fmt.format("Spark", "Hadoop")] + 
+                                 [sep] + 
+                                 [fmt.format(v["spark"], v["hadoop"]) for v in available_versions] + 
+                                 [sep]))
+        raise RuntimeError("Unrecognized combination of Spark/Hadoop versions: (%s, %s). Please select a valid pair of Spark and Hadoop versions to download."%(spark_version, hadoop_version))
 
+    candidate = sorted(versions, key=lambda rec: _combine_versions(rec["spark"], rec["hadoop"]))[-1]
+    return spark_install_info(candidate["spark"], candidate["hadoop"])
 
 def spark_default_version():
     if len(spark_installed_versions()) > 0:
         version = spark_install_find()
     else:
-        version = filter(lambda v: v["default"] and v["hadoop_default"], read_spark_versions_csv())[0]
-    return {"spark_version": version["spark_version"], "hadoop_version": version["hadoop_version"]}
+        version = sorted(spark_versions_initialize(), key=lambda rec: _combine_versions(rec["spark"], rec["hadoop"]))[-1]
+    return {"spark": version["spark"], "hadoop": version["hadoop"]}
 
-
-def spark_install_info(spark_version=None, hadoop_version=None):
+def spark_install_info(spark_version, hadoop_version):
     info = spark_versions_info(spark_version, hadoop_version)
     component_name = info["component_name"]
     package_name = info["package_name"]
@@ -179,17 +155,17 @@ def spark_install_info(spark_version=None, hadoop_version=None):
             "package_remote_path": package_remote_path,
             "spark_version_dir": spark_version_dir,
             "spark_conf_dir": os.path.join(spark_version_dir, "conf"),
-            "spark_version": spark_version,
-            "hadoop_version": hadoop_version,
+            "spark": spark_version,
+            "hadoop": hadoop_version,
             "installed": os.path.isdir(spark_version_dir)}
 
 
 def spark_uninstall(spark_version, hadoop_version):
-    logger.debug("Inside uninstall routine.")
+    logging.debug("Inside uninstall routine.")
     info = spark_versions_info(spark_version, hadoop_version)
     spark_dir = os.path.join(spark_install_dir(), info["component_name"])
     shutil.rmtree(spark_dir, ignore_errors=True)
-    logger.debug("File tree removed.")
+    logging.debug("File tree removed.")
 
 
 def spark_install_dir():
@@ -202,9 +178,6 @@ def spark_conf_log4j_set_value(install_info, properties, reset):
     if not os.path.isfile(log4jproperties_file) or reset:
         template = os.path.join(install_info["spark_conf_dir"], "log4j.properties.template")
         shutil.copyfile(template, log4jproperties_file)
-
-#    from pprint import pprint
-#    pprint(properties)
 
     with open(log4jproperties_file, "r") as infile:
         lines = infile.readlines()
@@ -284,19 +257,21 @@ def spark_set_env_vars(spark_version_dir):
             import _winreg as winreg
         except ImportError:
             import winreg
-        logger.info("Setting the following variables in your registry under HKEY_CURRENT_USER\\Environment:")
+        logging.info("Setting the following variables in your registry under HKEY_CURRENT_USER\\Environment:")
         for k, v in persistent_vars.items():
-            logger.info("%s = %s (REG_SZ)" % (k, v))
+            logging.info("%s = %s (REG_SZ)" % (k, v))
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE) as hkey:
             for value, value_data in persistent_vars.items():
                 winreg.SetValueEx(hkey, value, 0, winreg.REG_SZ, value_data)
-        import win32gui, win32con
-        win32gui.SendMessageTimeout(win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, "Environment", win32con.SMTO_ABORTIFHUNG, 5000)
+        try:
+            import win32gui, win32con
+            win32gui.SendMessageTimeout(win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, "Environment", win32con.SMTO_ABORTIFHUNG, 5000)
+        except ImportError:
+            logging.warning("Could not refresh the registry, please install the PyWin32 package")
     else:
-        logger.info("Set the following environment variables in your ~/.bashrc: ")
-        for k, v in persistent_vars.iteritems():
-            logger.info("export %s = %s" % (k, v))
-
+        logging.info("Set the following environment variables in your initialization file such as ~/.bashrc: ")
+        for k, v in persistent_vars.items():
+            logging.info("export %s = %s" % (k, v))
 
 def spark_remove_env_vars():
     # Remove env variables since there's no other spark installed.
@@ -304,7 +279,6 @@ def spark_remove_env_vars():
     os.environ.pop("PYTHONPATH")
     os.unsetenv("SPARK_HOME")
     os.unsetenv("PYTHONPATH")
-
 
 def spark_install_winutils(spark_dir, hadoop_version):
     import glob
@@ -317,35 +291,35 @@ def spark_install_winutils(spark_dir, hadoop_version):
     candidates = glob.glob(os.path.join(spark_dir, "winutils-master", "hadoop-" + hadoop_version + "*"))
 
     if candidates == []:
-        logger.info("No compatible WinUtils found for Hadoop version %s." % hadoop_version)
+        logging.info("No compatible WinUtils found for Hadoop version %s." % hadoop_version)
         return
 
     os.environ["HADOOP_HOME"] = candidates[-1]
 
 
-def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="INFO"):
+def spark_install(spark_version=None, hadoop_version=None, reset=True, loglevel="INFO"):
 
     info = spark_install_find(spark_version, hadoop_version, installed_only=False)
 
     spark_can_install()
 
-    logger.info("Installing and configuring Spark version: %s, Hadoop version: %s" % (info["spark_version"], info["hadoop_version"]))
+    logging.info("Installing and configuring Spark version: %s, Hadoop version: %s" % (info["spark"], info["hadoop"]))
 
     if not os.path.isdir(info["spark_version_dir"]):
         if not os.path.isfile(info["package_local_path"]):
             import urllib
-            logger.info("Downloading %s into %s" % (info["package_remote_path"], info["package_local_path"]))
+            logging.info("Downloading %s into %s" % (info["package_remote_path"], info["package_local_path"]))
             _download_file(info["package_remote_path"], info["package_local_path"])
 
-        logger.info("Extracting %s into %s" % (info["package_local_path"], info["spark_dir"]))
+        logging.info("Extracting %s into %s" % (info["package_local_path"], info["spark_dir"]))
         import tarfile
         with tarfile.open(info["package_local_path"]) as tf:
             tf.extractall(info["spark_dir"])
 
-    if logging:
+    if loglevel:
         from collections import OrderedDict
         configs = OrderedDict()
-        configs["log4j.rootCategory"] = ",".join((logging, "console", "localfile"))
+        configs["log4j.rootCategory"] = ",".join((loglevel, "console", "localfile"))
         configs["log4j.appender.localfile"] = "org.apache.log4j.DailyRollingFileAppender"
         configs["log4j.appender.localfile.file"] = "log4j.spark.log"
         configs["log4j.appender.localfile.layout"] = "org.apache.log4j.PatternLayout"
@@ -376,47 +350,54 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, logging="
     spark_set_env_vars(info["spark_version_dir"])
 
     if sys.platform == "win32":
-        spark_install_winutils(info["spark_dir"], info["hadoop_version"])
+        spark_install_winutils(info["spark_dir"], info["hadoop"])
 
 
 def main():
+    import argparse
     parser = argparse.ArgumentParser(description="Spark Installation Script")
     parser.add_argument("-sv", "--spark-version", help="Spark Version to be used.", required=False, dest="spark_version")
     parser.add_argument("-hv", "--hadoop-version", help="Hadoop Version to be used.", required=False, dest="hadoop_version")
     parser.add_argument("-u", "--uninstall", help="Uninstall Spark", action="store_true", default=False, required=False)
     parser.add_argument("-i", "--information", help="Show installed versions of Spark", action="store_true", default=False, required=False)
+    parser.add_argument("-l", "--log-level", help="Set the log level", choices=["DEBUG", "INFO", "WARNING"], default="WARNING", required=False, dest="log_level")
 
     args = parser.parse_args()
+
+    # Set up logging parameters 
+    logging.basicConfig(filename="install_spark.log", format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=getattr(logging, args.log_level))
+    logging.getLogger().addHandler(logging.StreamHandler())
+    logging.info("Logging started")
     
-    # Debug log the values #
-    logger.debug("Spark Version specified: %s" % args.spark_version)
-    logger.debug("Hadoop Version specified: %s" % args.hadoop_version)
-    logger.debug("Uninstall argument: %s" % args.uninstall)
-    logger.debug("Information argument: %s" % args.information)
+    # Debug log the values 
+    logging.debug("Spark Version specified: %s" % args.spark_version)
+    logging.debug("Hadoop Version specified: %s" % args.hadoop_version)
+    logging.debug("Uninstall argument: %s" % args.uninstall)
+    logging.debug("Information argument: %s" % args.information)
 
     # Check for uninstall or information flags and react appropriately
     if args.uninstall:
         if args.spark_version and args.hadoop_version:
             spark_uninstall(args.spark_version, args.hadoop_version)
         else:
-            logger.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
+            logging.critical("Spark and Hadoop versions must be specified for uninstallation. Use -i to view installed versions.")
     elif args.information:
         installedversions = list(spark_installed_versions())
+        fmt = "{:>8}| {:>8}| {:<}"
+        print(fmt.format("Spark", "Hadoop", "Location"))        
         for elem in installedversions:
-            logging.info(elem)
-        return installedversions
+            print(fmt.format(elem["spark"], elem["hadoop"], elem["dir"]))
     else:
         # Verify that Java 1.8 is running on the system and if it is, run the install.
         if _verify_java():
-            logger.debug("Prerequisites checked successfully, running installation.")
-            logger.debug("Spark Version: %s" % args.spark_version)
-            logger.debug("Hadoop Version: %s" % args.hadoop_version)
+            logging.debug("Prerequisites checked successfully, running installation.")
+            logging.debug("Spark Version: %s" % args.spark_version)
+            logging.debug("Hadoop Version: %s" % args.hadoop_version)
             spark_install(args.spark_version, args.hadoop_version, True, "INFO")
-            logger.debug("Completed the install")
+            logging.debug("Completed the install")
         else:
-            logger.critical("A prerequisite for installation has not been satisfied. Please check output log for details.")
+            logging.critical("A prerequisite for installation has not been satisfied. Please check output log for details.")
 
 
 if __name__ == "__main__":
     main()
-
