@@ -232,7 +232,7 @@ def spark_set_env_vars(spark_version_dir):
     if zipfiles != [] and zipfiles[0] not in sys.path:
         position = [index for (index, path) in enumerate(sys.path) if
                     re.match(SPARK_VERSIONS_FILE_PATTERN, path)] or len(sys.path)
-        sys.path = sys.path[:position] + zipfiles + sys.path[position:]
+        sys.path.insert(position, zipfiles)
 
     persistent_vars = {}
 
@@ -241,7 +241,7 @@ def spark_set_env_vars(spark_version_dir):
     if zipfiles != [] and zipfiles[0] not in path_values:
         position = [index for (index, path) in enumerate(path_values) if
                     re.match(SPARK_VERSIONS_FILE_PATTERN, path)] or len(path_values)
-        path_values = path_values[:position] + zipfiles + path_values[position:]
+        path_values.insert(position, zipfiles)
         os.environ["PYTHONPATH"] = path_delim.join(path_values)
         persistent_vars["PYTHONPATH"] = path_delim.join(path_values)
 
@@ -331,7 +331,7 @@ def spark_install(spark_version=None, hadoop_version=None, reset=True, loglevel=
 
     if not os.path.isfile(hive_site_path) or reset:
         hive_properties = OrderedDict()
-        hive_properties["javax.jdo.option.ConnectionURL"] = "jdbc:derby:memory:databaseName=metastore_db;create=true",
+        hive_properties["javax.jdo.option.ConnectionURL"] = "jdbc:derby:memory:databaseName=metastore_db;create=true"
         hive_properties["javax.jdo.option.ConnectionDriverName"] = "org.apache.derby.jdbc.EmbeddedDriver"
 
         if sys.platform == "win32":
