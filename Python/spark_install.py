@@ -232,7 +232,7 @@ def spark_set_env_vars(spark_version_dir):
     if zipfiles != [] and zipfiles[0] not in sys.path:
         position = [index for (index, path) in enumerate(sys.path) if
                     re.match(SPARK_VERSIONS_FILE_PATTERN, path)] or len(sys.path)
-        sys.path.insert(position, zipfiles)
+        path_values[position:position] = zipfiles
 
     persistent_vars = {}
 
@@ -241,7 +241,7 @@ def spark_set_env_vars(spark_version_dir):
     if zipfiles != [] and zipfiles[0] not in path_values:
         position = [index for (index, path) in enumerate(path_values) if
                     re.match(SPARK_VERSIONS_FILE_PATTERN, path)] or len(path_values)
-        path_values.insert(position, zipfiles)
+        path_values[position:position] = zipfiles
         os.environ["PYTHONPATH"] = path_delim.join(path_values)
         persistent_vars["PYTHONPATH"] = path_delim.join(path_values)
 
