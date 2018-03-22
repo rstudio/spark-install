@@ -266,13 +266,13 @@
   {
     "spark": "2.3.0",
     "hadoop": "2.7",
-    "base": "https://www.apache.org/dyn/closer.lua/spark/spark-2.3.0/",
+    "base": "https://www-us.apache.org/dist/spark/spark-2.3.0/",
     "pattern": "spark-%s-bin-hadoop%s.tgz"
   },
   {
     "spark": "2.3.0",
     "hadoop": "2.6",
-    "base": "https://www.apache.org/dyn/closer.lua/spark/spark-2.3.0/",
+    "base": "https://www-us.apache.org/dist/spark/spark-2.3.0/",
     "pattern": "spark-%s-bin-hadoop%s.tgz"
   }
 ]
