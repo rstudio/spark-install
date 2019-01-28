@@ -229,6 +229,7 @@ def spark_conf_file_set_value(install_info, properties, reset):
 def spark_set_env_vars(spark_version_dir):
     import glob
     zipfiles = glob.glob(os.path.join(spark_version_dir, "python", "lib", "*.zip"))
+    path_values = []
     if zipfiles != [] and zipfiles[0] not in sys.path:
         position = [index for (index, path) in enumerate(sys.path) if
                     re.match(SPARK_VERSIONS_FILE_PATTERN, path)] or len(sys.path)
